@@ -2,15 +2,15 @@ feature
 tenure
 Contract_Month-to-month
 OnlineSecurity_No
-TenureGroup_0-12
+InternetService_Fiber optic
 Contract_Two year
 TechSupport_No
 PaymentMethod_Electronic check
-InternetService_Fiber optic
-OnlineBackup_No
+TotalCharges
+TenureGroup_0-12
 TenureGroup_48-72
-TotalCharges_1052.35
-TotalCharges_num
-TotalCharges_1099.6
+PaperlessBilling
 AvgChargesPerMonth
-TotalCharges_4759.75
+MonthlyCharges
+TenureGroup_12-24
+OnlineBackup_No
