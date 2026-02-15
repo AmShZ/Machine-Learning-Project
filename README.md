@@ -1,53 +1,52 @@
 # Telco Customer Churn Prediction
 
-This repo is a team project around predicting customer churn using the Telco Customer Churn dataset.
+Team project for predicting customer churn using the **Telco Customer Churn** dataset (binary classification).
+
+**Primary evaluation focus:** maximize **Recall** for the churn class (`churn = 1`).
 
 Included so far:
 - Phase 1: Exploratory Data Analysis (EDA)
-- Phase 2: Preprocessing
+- Phase 2: Preprocessing (leakage-safe)
+- Phase 3: Feature Engineering & Feature Selection
 
 ---
 
 ## Project structure
 
-```
 .
 ├── src/
 │   ├── eda.py
-│   └── preprocess.py
+│   ├── preprocess.py
+│   └── features.py
 ├── reports/
 │   ├── eda.md
 │   ├── preprocessing.md
-│   └── figures/
+│   ├── feature_engineering.md
+│   ├── figures/
+│   └── tables/
 ├── data/
 │   ├── raw/
 │   └── processed/
 ├── models/
 └── requirements.txt
-```
 
 Notes:
-- `data/` and `models/` are gitignored by default. Keep large files out of git.
 - All scripts are run from the repo root.
 
 ---
 
-## Setup (Linux)
+## Setup (Linux / macOS)
 
 From the repo root:
 
-```bash
-mkdir -p src reports data/raw data/processed models
-```
+mkdir -p src reports/figures reports/tables data/raw data/processed models
 
 Create a virtual environment and install dependencies:
 
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -U pip
 python3 -m pip install -r requirements.txt
-```
 
 ---
 
@@ -55,9 +54,7 @@ python3 -m pip install -r requirements.txt
 
 Put the dataset here:
 
-```bash
 cp /path/to/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/telco_churn.csv
-```
 
 ---
 
@@ -65,98 +62,95 @@ cp /path/to/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/telco_churn.csv
 
 Run:
 
-```bash
 python3 -m src.eda
-```
 
 Outputs:
-- `reports/eda.md`
-- `reports/figures/` (plots)
+- reports/eda.md
+- reports/figures/ (plots)
 
 ---
 
-## Phase 2: Preprocessing
+## Phase 2: Preprocessing (leakage-safe)
 
 Run:
 
-```bash
 python3 -m src.preprocess
-```
+
+What it does (high level):
+- Converts target to `churn` (Yes=1, No=0)
+- Handles missing values (including `TotalCharges`)
+- Encodes categorical features (binary mapping + one-hot)
+- Scales numeric features
+- Uses a leakage-safe protocol: stratified train/test split first (80/20, seed=42), fit preprocessing on train only
+
+Outputs (key artifacts):
+- data/processed/telco_churn_clean.csv
+- data/processed/ (preprocessed train/test CSVs + train/test indices)
+- data/processed/feature_names.txt
+- models/preprocessor.joblib
+- models/binary_mappings.json
+- reports/preprocessing.md
+
+---
+
+## Phase 3: Feature Engineering & Selection
+
+Run:
+
+python3 -m src.features
+
+What it does:
+- Reuses Phase 2 split + clean data (no leakage)
+- Adds engineered features:
+  - AvgChargesPerMonth
+  - NumServicesYes
+  - TenureGroup
+- Runs feature selection:
+  - ANOVA F-test (top ~15)
+  - L1 Logistic (top ~15 by |coef|)
+  - RandomForest importance (top ~15)
+- Produces a final selected feature set and documents the logic
 
 Outputs:
-- `data/processed/telco_churn_preprocessed.csv` (features plus `churn` target)
-- `data/processed/feature_names.txt`
-- `reports/preprocessing.md`
-- `models/preprocessor.joblib`
-- `models/binary_mappings.json`
+- reports/feature_engineering.md
+- reports/tables/selected_features_filter.csv
+- reports/tables/selected_features_model_l1.csv
+- reports/tables/selected_features_model_rf.csv
+- reports/tables/selected_features_final.csv
 
 ---
 
-## How to verify everything worked
+## Quick verification
 
-### Check outputs exist
+Check reports exist:
 
-```bash
-ls -lah reports/eda.md reports/preprocessing.md
+ls -lah reports/eda.md reports/preprocessing.md reports/feature_engineering.md
+
+Check phase folders:
+
 ls -lah reports/figures | head
-ls -lah data/processed/telco_churn_preprocessed.csv data/processed/feature_names.txt
-ls -lah models/preprocessor.joblib models/binary_mappings.json
-```
+ls -lah reports/tables | head
+ls -lah models | head
+ls -lah data/processed | head
 
-You should see:
-- both report files
-- multiple `.png` files under `reports/figures/`
-- the processed CSV and feature list
-- the saved preprocessing artifacts in `models/`
+Optional sanity check for churn labels (adjust the filename to whichever processed CSV you want to inspect):
 
-### Sanity checks on the processed dataset
-
-```bash
 python3 - << 'PY'
 import pandas as pd
-
-df = pd.read_csv("data/processed/telco_churn_preprocessed.csv")
-print("processed shape:", df.shape)
+path = "data/processed/telco_churn_clean.csv"
+df = pd.read_csv(path)
+print("loaded:", path)
+print("shape:", df.shape)
 print("has churn:", "churn" in df.columns)
-print("churn unique:", sorted(df["churn"].unique().tolist()))
-print("total missing:", int(df.isna().sum().sum()))
+if "churn" in df.columns:
+    print("churn unique:", sorted(df["churn"].dropna().unique().tolist()))
 PY
-```
-
-Expected:
-- `has churn: True`
-- `churn unique: [0, 1]`
-- `total missing: 0`
-- the number of rows should match the raw dataset (typically 7043 for the common Telco CSV)
-
-### Feature list matches the processed columns
-
-```bash
-python3 - << 'PY'
-import pandas as pd
-
-fn = open("data/processed/feature_names.txt").read().splitlines()
-df = pd.read_csv("data/processed/telco_churn_preprocessed.csv")
-print("features in txt:", len(fn))
-print("features in csv (excluding churn):", df.shape[1] - 1)
-PY
-```
-
-Expected:
-- the two counts match
 
 ---
 
-## Next phases
+## Next (Phase 4+)
 
-Suggested next steps:
-- Phase 3: Train baseline models (logistic regression, random forest, gradient boosting)
-- Phase 4: Evaluation (train/val split, cross-validation, ROC-AUC, PR-AUC, confusion matrix)
-- Phase 5: Model selection and export (save best model under `models/`)
-- Phase 6: Inference script (take raw CSV, apply `preprocessor.joblib`, output predictions)
-
-Recommended conventions:
-- Put training code in `src/train.py` and evaluation code in `src/evaluate.py`.
-- Save trained models to `models/`.
-- Add new reports to `reports/` and keep them short.
-- Do not commit the dataset or large artifacts into git.
+Planned next steps:
+- Modeling + optimization (with imbalance handling, e.g., SMOTE / class weights)
+- Hyperparameter tuning and model selection driven by Recall for churn=1
+- Final evaluation report + saved best model under models/
