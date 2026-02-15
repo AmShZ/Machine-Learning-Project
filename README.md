@@ -2,10 +2,9 @@
 
 This repo is a team project around predicting customer churn using the Telco Customer Churn dataset.
 
-Right now it includes:
+Included so far:
 - Phase 1: Exploratory Data Analysis (EDA)
 - Phase 2: Preprocessing
-
 
 ---
 
@@ -54,13 +53,11 @@ python3 -m pip install -r requirements.txt
 
 ## Dataset
 
-Recommended path and name:
+Put the dataset here:
 
 ```bash
 cp /path/to/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/telco_churn.csv
 ```
-
-If you do not want to rename the file, keep the original name and pass `--data` when running scripts.
 
 ---
 
@@ -70,12 +67,6 @@ Run:
 
 ```bash
 python3 -m src.eda
-```
-
-With a custom dataset path:
-
-```bash
-python3 -m src.eda --data /path/to/your.csv
 ```
 
 Outputs:
@@ -90,12 +81,6 @@ Run:
 
 ```bash
 python3 -m src.preprocess
-```
-
-With a custom dataset path:
-
-```bash
-python3 -m src.preprocess --data /path/to/your.csv
 ```
 
 Outputs:
@@ -162,12 +147,7 @@ Expected:
 
 ---
 
-## Guidance for later phases (for teammates)
-
-The output of Phase 2 is the contract for the rest of the project:
-- Use `data/processed/telco_churn_preprocessed.csv` as the default modeling input.
-- Treat `churn` as the target.
-- If you need the exact preprocessing logic, load `models/preprocessor.joblib`.
+## Next phases
 
 Suggested next steps:
 - Phase 3: Train baseline models (logistic regression, random forest, gradient boosting)
@@ -176,7 +156,7 @@ Suggested next steps:
 - Phase 6: Inference script (take raw CSV, apply `preprocessor.joblib`, output predictions)
 
 Recommended conventions:
-- Put new training code in `src/train.py` and evaluation code in `src/evaluate.py`.
-- Save any trained models to `models/`.
+- Put training code in `src/train.py` and evaluation code in `src/evaluate.py`.
+- Save trained models to `models/`.
 - Add new reports to `reports/` and keep them short.
 - Do not commit the dataset or large artifacts into git.
