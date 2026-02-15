@@ -1,10 +1,12 @@
-# Telco Customer Churn — Phase 1 (EDA) + Phase 2 (Preprocessing)
+# Telco Customer Churn Prediction
 
-This repo contains **Phase 1: EDA** and **Phase 2: Preprocessing** for the Telco Customer Churn dataset.
+This repo is a team project around predicting customer churn using the Telco Customer Churn dataset.
 
-Outputs are lightweight and reproducible:
-- EDA generates `reports/eda.md` + plots in `reports/figures/`
-- Preprocessing generates a clean ML-ready CSV and saves the fitted preprocessing pipeline
+Right now it includes:
+- Phase 1: Exploratory Data Analysis (EDA)
+- Phase 2: Preprocessing
+
+The repo is structured so other teammates can continue with later phases without changing what is already here.
 
 ---
 
@@ -26,7 +28,9 @@ Outputs are lightweight and reproducible:
 └── requirements.txt
 ```
 
-`data/` and `models/` are gitignored (recommended).
+Notes:
+- `data/` and `models/` are gitignored by default. Keep large files out of git.
+- All scripts are run from the repo root.
 
 ---
 
@@ -38,41 +42,41 @@ From the repo root:
 mkdir -p src reports data/raw data/processed models
 ```
 
-Create venv and install dependencies:
+Create a virtual environment and install dependencies:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -U pip
-pip install -r requirements.txt
+python3 -m pip install -U pip
+python3 -m pip install -r requirements.txt
 ```
 
 ---
 
-## Put the dataset
+## Dataset
 
-Recommended (simplest): rename to `telco_churn.csv`:
+Recommended path and name:
 
 ```bash
 cp /path/to/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/telco_churn.csv
 ```
 
-If you don’t want to rename: keep the original name and pass `--data` when running scripts.
+If you do not want to rename the file, keep the original name and pass `--data` when running scripts.
 
 ---
 
-## Phase 1 — EDA
+## Phase 1: EDA
 
 Run:
 
 ```bash
-python -m src.eda
+python3 -m src.eda
 ```
 
-Custom dataset path:
+With a custom dataset path:
 
 ```bash
-python -m src.eda --data /path/to/your.csv
+python3 -m src.eda --data /path/to/your.csv
 ```
 
 Outputs:
@@ -81,22 +85,22 @@ Outputs:
 
 ---
 
-## Phase 2 — Preprocessing
+## Phase 2: Preprocessing
 
 Run:
 
 ```bash
-python -m src.preprocess
+python3 -m src.preprocess
 ```
 
-Custom dataset path:
+With a custom dataset path:
 
 ```bash
-python -m src.preprocess --data /path/to/your.csv
+python3 -m src.preprocess --data /path/to/your.csv
 ```
 
 Outputs:
-- `data/processed/telco_churn_preprocessed.csv` (final features + `churn` target column)
+- `data/processed/telco_churn_preprocessed.csv` (features plus `churn` target)
 - `data/processed/feature_names.txt`
 - `reports/preprocessing.md`
 - `models/preprocessor.joblib`
@@ -104,77 +108,76 @@ Outputs:
 
 ---
 
-## What to verify (to make sure the pipeline ran correctly)
+## How to verify everything worked
 
-### 1) Files exist
-After running both phases:
+### Check outputs exist
 
 ```bash
 ls -lah reports/eda.md reports/preprocessing.md
 ls -lah reports/figures | head
-ls -lah data/processed/telco_churn_preprocessed.csv
+ls -lah data/processed/telco_churn_preprocessed.csv data/processed/feature_names.txt
 ls -lah models/preprocessor.joblib models/binary_mappings.json
 ```
 
 You should see:
-- `reports/eda.md`
-- `reports/preprocessing.md`
-- multiple `.png` files in `reports/figures/`
-- `data/processed/telco_churn_preprocessed.csv`
-- `models/preprocessor.joblib`
-- `models/binary_mappings.json`
+- both report files
+- multiple `.png` files under `reports/figures/`
+- the processed CSV and feature list
+- the saved preprocessing artifacts in `models/`
 
-### 2) EDA content looks sane
-Open `reports/eda.md` and check:
-- dataset row/col counts are printed
-- churn rate is printed
-- figures are referenced (images show up if you view markdown)
-
-### 3) Preprocessed dataset shape and target
-Run:
+### Sanity checks on the processed dataset
 
 ```bash
-python - << 'PY'
+python3 - << 'PY'
 import pandas as pd
+
 df = pd.read_csv("data/processed/telco_churn_preprocessed.csv")
-print("rows, cols:", df.shape)
+print("processed shape:", df.shape)
 print("has churn:", "churn" in df.columns)
-print("churn value counts:")
-print(df["churn"].value_counts())
-PY
-```
-
-Expected:
-- `has churn: True`
-- `churn` contains only `0` and `1`
-- row count matches the original dataset (usually 7043)
-
-### 4) No missing values in the final output
-Run:
-
-```bash
-python - << 'PY'
-import pandas as pd
-df = pd.read_csv("data/processed/telco_churn_preprocessed.csv")
+print("churn unique:", sorted(df["churn"].unique().tolist()))
 print("total missing:", int(df.isna().sum().sum()))
 PY
 ```
 
 Expected:
+- `has churn: True`
+- `churn unique: [0, 1]`
 - `total missing: 0`
+- the number of rows should match the raw dataset (typically 7043 for the common Telco CSV)
 
-### 5) Feature names match column count (sanity check)
-Run:
+### Feature list matches the processed columns
 
 ```bash
-python - << 'PY'
+python3 - << 'PY'
 import pandas as pd
+
 fn = open("data/processed/feature_names.txt").read().splitlines()
 df = pd.read_csv("data/processed/telco_churn_preprocessed.csv")
 print("features in txt:", len(fn))
-print("features in csv (excluding churn):", df.shape[1]-1)
+print("features in csv (excluding churn):", df.shape[1] - 1)
 PY
 ```
 
 Expected:
-- the two numbers match
+- the two counts match
+
+---
+
+## Guidance for later phases (for teammates)
+
+The output of Phase 2 is the contract for the rest of the project:
+- Use `data/processed/telco_churn_preprocessed.csv` as the default modeling input.
+- Treat `churn` as the target.
+- If you need the exact preprocessing logic, load `models/preprocessor.joblib`.
+
+Suggested next steps:
+- Phase 3: Train baseline models (logistic regression, random forest, gradient boosting)
+- Phase 4: Evaluation (train/val split, cross-validation, ROC-AUC, PR-AUC, confusion matrix)
+- Phase 5: Model selection and export (save best model under `models/`)
+- Phase 6: Inference script (take raw CSV, apply `preprocessor.joblib`, output predictions)
+
+Recommended conventions:
+- Put new training code in `src/train.py` and evaluation code in `src/evaluate.py`.
+- Save any trained models to `models/`.
+- Add new reports to `reports/` and keep them short.
+- Do not commit the dataset or large artifacts into git.
