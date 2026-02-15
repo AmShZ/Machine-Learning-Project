@@ -6,7 +6,6 @@ Right now it includes:
 - Phase 1: Exploratory Data Analysis (EDA)
 - Phase 2: Preprocessing
 
-The repo is structured so other teammates can continue with later phases without changing what is already here.
 
 ---
 
