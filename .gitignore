@@ -212,3 +212,8 @@ __pycache__/
 .ipynb_checkpoints/
 data/
 models/
+
+*.zip
+*.joblib
+WA_Fn-UseC_-Telco-Customer-Churn.csv
+data-set.zip
