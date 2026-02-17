@@ -1,13 +1,14 @@
-# Telco Customer Churn Prediction
+# Telco Customer Churn Prediction (Project 7 – Fall 2025)
 
 Team project for predicting customer churn using the **Telco Customer Churn** dataset (binary classification).
 
-**Primary evaluation focus:** maximize **Recall** for the churn class (`churn = 1`).
+**Primary evaluation focus:** maximize **Recall** for the churn class (`churn = 1`), while keeping **F1 ≥ 0.50** (challenge constraint).
 
-Included so far:
+Implemented phases:
 - Phase 1: Exploratory Data Analysis (EDA)
 - Phase 2: Preprocessing
 - Phase 3: Feature Engineering & Feature Selection
+- Phase 4: Modeling + Optimization (imbalance handling, CV, tuning, soft voting)
 
 ---
 
@@ -18,11 +19,13 @@ Included so far:
 ├── src/
 │   ├── eda.py
 │   ├── preprocess.py
-│   └── features.py
+│   ├── features.py
+│   └── modeling.py
 ├── reports/
 │   ├── eda.md
 │   ├── preprocessing.md
 │   ├── feature_engineering.md
+│   ├── modeling.md
 │   ├── figures/
 │   └── tables/
 ├── data/
@@ -33,20 +36,14 @@ Included so far:
 ```
 
 Notes:
-- All scripts are run from the repo root.
+- Run all commands from the repo root.
+- Do **not** include `.venv/`, `.git/`, `__pycache__/` in the final submission zip.
 
 ---
 
-## Setup (Linux / macOS)
+## Setup
 
-From the repo root:
-
-```bash
-mkdir -p src reports/figures reports/tables data/raw data/processed models
-```
-
-Create a virtual environment and install dependencies:
-
+### Linux / macOS
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -54,14 +51,36 @@ python3 -m pip install -U pip
 python3 -m pip install -r requirements.txt
 ```
 
+### Windows (PowerShell)
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+py -m pip install -U pip
+py -m pip install -r requirements.txt
+```
+
+If `xgboost` installation fails on your machine, the Phase 4 script will still run but will skip the XGBoost model.
+
 ---
 
 ## Dataset
 
-Put the dataset here:
+Place the dataset at:
 
+```text
+data/raw/telco_churn.csv
+```
+
+Example:
+
+### Linux / macOS
 ```bash
 cp /path/to/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/telco_churn.csv
+```
+
+### Windows (PowerShell)
+```powershell
+Copy-Item "$env:USERPROFILE\Downloads\WA_Fn-UseC_-Telco-Customer-Churn.csv" "data\raw\telco_churn.csv"
 ```
 
 ---
@@ -69,9 +88,8 @@ cp /path/to/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/telco_churn.csv
 ## Phase 1: EDA
 
 Run:
-
 ```bash
-python3 -m src.eda
+python -m src.eda
 ```
 
 Outputs:
@@ -83,32 +101,33 @@ Outputs:
 ## Phase 2: Preprocessing
 
 Run:
-
 ```bash
-python3 -m src.preprocess
+python -m src.preprocess
 ```
 
 What it does (high level):
-- Cleans/encodes the raw data
-- Produces preprocessed datasets and saves preprocessing artifacts for reuse
+- Cleans and encodes the raw data (binary mappings + one-hot encoding)
+- Scales numerical features (as configured)
+- Produces leakage-safe train/test processed datasets
+- Saves preprocessing artifacts for reuse
 
-Outputs (see `reports/preprocessing.md` for the exact list):
+Outputs (see `reports/preprocessing.md` for details):
 - `reports/preprocessing.md`
-- `data/processed/` (processed datasets + metadata like feature names / indices if applicable)
-- `models/` (saved preprocessor and mappings, if applicable)
+- `data/processed/` (processed datasets)
+- `models/preprocessor.joblib`
+- `models/binary_mappings.json`
 
 ---
 
 ## Phase 3: Feature Engineering & Feature Selection
 
 Run:
-
 ```bash
-python3 -m src.features
+python -m src.features
 ```
 
 What it does:
-- Reuses the Phase 2 outputs (leakage-safe)
+- Reuses Phase 2 outputs (leakage-safe)
 - Adds engineered features (e.g., charge rate, service count, tenure grouping)
 - Runs feature selection with multiple methods (filter + model-based)
 - Produces a final selected feature set and documents the rationale
@@ -122,45 +141,53 @@ Outputs:
 
 ---
 
-## Quick verification
+## Phase 4: Modeling + Optimization
 
-Check reports exist:
-
+Run:
 ```bash
-ls -lah reports/eda.md reports/preprocessing.md reports/feature_engineering.md
+python -m src.modeling
 ```
 
-Check artifacts exist:
+What it does:
+- Handles class imbalance in two ways and compares them:
+  - `class_weight="balanced"`
+  - **SMOTE** (applied **only on training folds** inside CV)
+- Trains and evaluates baseline models with **Stratified K-Fold CV**:
+  - Logistic Regression
+  - SVM / KNN (depending on configuration)
+  - Random Forest
+  - Gradient Boosting (XGBoost if available)
+- Hyperparameter tuning for at least two models (e.g., LogReg & RF)
+- Builds a **Soft Voting** ensemble from the top models
+- Produces CV metrics (mean ± std), emphasizing **Recall for churn=1** and tracking F1 for the challenge constraint (F1 ≥ 0.50)
+
+Outputs:
+- `reports/modeling.md`
+- `reports/tables/phase4_cv_baselines.csv`
+- `reports/tables/phase4_cv_tuned.csv`
+- `reports/tables/phase4_cv_all_results.csv`
+- `models/phase4_best_model.joblib`
+
+---
+
+## Quick verification
 
 ```bash
-ls -lah reports/figures | head
+# reports
+ls -lah reports/eda.md reports/preprocessing.md reports/feature_engineering.md reports/modeling.md
+
+# key tables / artifacts
 ls -lah reports/tables | head
 ls -lah data/processed | head
 ls -lah models | head
 ```
 
-Optional: sanity check that a processed CSV contains `churn` and it’s binary  
-(adjust the path to the processed file you want to inspect):
-
-```bash
-python3 - << 'PY'
-import pandas as pd
-
-path = "data/processed/telco_churn_preprocessed.csv"  # change if your output file has a different name
-df = pd.read_csv(path)
-
-print("loaded:", path)
-print("shape:", df.shape)
-print("has churn:", "churn" in df.columns)
-if "churn" in df.columns:
-    print("churn unique:", sorted(df["churn"].dropna().unique().tolist()))
-PY
-```
-
 ---
 
-## Next phases
+## Next phase (Phase 5)
 
-Suggested next steps:
-- Modeling + optimization (handle imbalance, tune models, focus on Recall for churn=1)
-- Final evaluation report and saved best model under `models/`
+Phase 5 (final evaluation) should include:
+- Test-set evaluation (Accuracy/Precision/Recall/F1)
+- ROC-AUC for top models
+- Confusion matrix
+- Final model selection + business recommendations
