@@ -1,24 +1,33 @@
-# Telco Customer Churn Prediction
+# Telco Customer Churn Prediction (Project 7 – Fall 2025)
 
-This repo is a team project around predicting customer churn using the Telco Customer Churn dataset.
+Team project for predicting customer churn using the **Telco Customer Churn** dataset (binary classification).
 
-Included so far:
+**Primary evaluation focus:** maximize **Recall** for the churn class (`churn = 1`), while keeping **F1 ≥ 0.50** (challenge constraint).
+
+Implemented phases:
 - Phase 1: Exploratory Data Analysis (EDA)
 - Phase 2: Preprocessing
+- Phase 3: Feature Engineering & Feature Selection
+- Phase 4: Modeling + Optimization (imbalance handling, CV, tuning, soft voting)
 
 ---
 
 ## Project structure
 
-```
+```text
 .
 ├── src/
 │   ├── eda.py
-│   └── preprocess.py
+│   ├── preprocess.py
+│   ├── features.py
+│   └── modeling.py
 ├── reports/
 │   ├── eda.md
 │   ├── preprocessing.md
-│   └── figures/
+│   ├── feature_engineering.md
+│   ├── modeling.md
+│   ├── figures/
+│   └── tables/
 ├── data/
 │   ├── raw/
 │   └── processed/
@@ -27,21 +36,14 @@ Included so far:
 ```
 
 Notes:
-- `data/` and `models/` are gitignored by default. Keep large files out of git.
-- All scripts are run from the repo root.
+- Run all commands from the repo root.
+- Do **not** include `.venv/`, `.git/`, `__pycache__/` in the final submission zip.
 
 ---
 
-## Setup (Linux)
+## Setup
 
-From the repo root:
-
-```bash
-mkdir -p src reports data/raw data/processed models
-```
-
-Create a virtual environment and install dependencies:
-
+### Linux / macOS
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -49,14 +51,36 @@ python3 -m pip install -U pip
 python3 -m pip install -r requirements.txt
 ```
 
+### Windows (PowerShell)
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+py -m pip install -U pip
+py -m pip install -r requirements.txt
+```
+
+If `xgboost` installation fails on your machine, the Phase 4 script will still run but will skip the XGBoost model.
+
 ---
 
 ## Dataset
 
-Put the dataset here:
+Place the dataset at:
 
+```text
+data/raw/telco_churn.csv
+```
+
+Example:
+
+### Linux / macOS
 ```bash
 cp /path/to/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/telco_churn.csv
+```
+
+### Windows (PowerShell)
+```powershell
+Copy-Item "$env:USERPROFILE\Downloads\WA_Fn-UseC_-Telco-Customer-Churn.csv" "data\raw\telco_churn.csv"
 ```
 
 ---
@@ -64,9 +88,8 @@ cp /path/to/WA_Fn-UseC_-Telco-Customer-Churn.csv data/raw/telco_churn.csv
 ## Phase 1: EDA
 
 Run:
-
 ```bash
-python3 -m src.eda
+python -m src.eda
 ```
 
 Outputs:
@@ -78,85 +101,93 @@ Outputs:
 ## Phase 2: Preprocessing
 
 Run:
-
 ```bash
-python3 -m src.preprocess
+python -m src.preprocess
 ```
 
-Outputs:
-- `data/processed/telco_churn_preprocessed.csv` (features plus `churn` target)
-- `data/processed/feature_names.txt`
+What it does (high level):
+- Cleans and encodes the raw data (binary mappings + one-hot encoding)
+- Scales numerical features (as configured)
+- Produces leakage-safe train/test processed datasets
+- Saves preprocessing artifacts for reuse
+
+Outputs (see `reports/preprocessing.md` for details):
 - `reports/preprocessing.md`
+- `data/processed/` (processed datasets)
 - `models/preprocessor.joblib`
 - `models/binary_mappings.json`
 
 ---
 
-## How to verify everything worked
+## Phase 3: Feature Engineering & Feature Selection
 
-### Check outputs exist
-
+Run:
 ```bash
-ls -lah reports/eda.md reports/preprocessing.md
-ls -lah reports/figures | head
-ls -lah data/processed/telco_churn_preprocessed.csv data/processed/feature_names.txt
-ls -lah models/preprocessor.joblib models/binary_mappings.json
+python -m src.features
 ```
 
-You should see:
-- both report files
-- multiple `.png` files under `reports/figures/`
-- the processed CSV and feature list
-- the saved preprocessing artifacts in `models/`
+What it does:
+- Reuses Phase 2 outputs (leakage-safe)
+- Adds engineered features (e.g., charge rate, service count, tenure grouping)
+- Runs feature selection with multiple methods (filter + model-based)
+- Produces a final selected feature set and documents the rationale
 
-### Sanity checks on the processed dataset
-
-```bash
-python3 - << 'PY'
-import pandas as pd
-
-df = pd.read_csv("data/processed/telco_churn_preprocessed.csv")
-print("processed shape:", df.shape)
-print("has churn:", "churn" in df.columns)
-print("churn unique:", sorted(df["churn"].unique().tolist()))
-print("total missing:", int(df.isna().sum().sum()))
-PY
-```
-
-Expected:
-- `has churn: True`
-- `churn unique: [0, 1]`
-- `total missing: 0`
-- the number of rows should match the raw dataset (typically 7043 for the common Telco CSV)
-
-### Feature list matches the processed columns
-
-```bash
-python3 - << 'PY'
-import pandas as pd
-
-fn = open("data/processed/feature_names.txt").read().splitlines()
-df = pd.read_csv("data/processed/telco_churn_preprocessed.csv")
-print("features in txt:", len(fn))
-print("features in csv (excluding churn):", df.shape[1] - 1)
-PY
-```
-
-Expected:
-- the two counts match
+Outputs:
+- `reports/feature_engineering.md`
+- `reports/tables/selected_features_filter.csv`
+- `reports/tables/selected_features_model_l1.csv`
+- `reports/tables/selected_features_model_rf.csv`
+- `reports/tables/selected_features_final.csv`
 
 ---
 
-## Next phases
+## Phase 4: Modeling + Optimization
 
-Suggested next steps:
-- Phase 3: Train baseline models (logistic regression, random forest, gradient boosting)
-- Phase 4: Evaluation (train/val split, cross-validation, ROC-AUC, PR-AUC, confusion matrix)
-- Phase 5: Model selection and export (save best model under `models/`)
-- Phase 6: Inference script (take raw CSV, apply `preprocessor.joblib`, output predictions)
+Run:
+```bash
+python -m src.modeling
+```
 
-Recommended conventions:
-- Put training code in `src/train.py` and evaluation code in `src/evaluate.py`.
-- Save trained models to `models/`.
-- Add new reports to `reports/` and keep them short.
-- Do not commit the dataset or large artifacts into git.
+What it does:
+- Handles class imbalance in two ways and compares them:
+  - `class_weight="balanced"`
+  - **SMOTE** (applied **only on training folds** inside CV)
+- Trains and evaluates baseline models with **Stratified K-Fold CV**:
+  - Logistic Regression
+  - SVM / KNN (depending on configuration)
+  - Random Forest
+  - Gradient Boosting (XGBoost if available)
+- Hyperparameter tuning for at least two models (e.g., LogReg & RF)
+- Builds a **Soft Voting** ensemble from the top models
+- Produces CV metrics (mean ± std), emphasizing **Recall for churn=1** and tracking F1 for the challenge constraint (F1 ≥ 0.50)
+
+Outputs:
+- `reports/modeling.md`
+- `reports/tables/phase4_cv_baselines.csv`
+- `reports/tables/phase4_cv_tuned.csv`
+- `reports/tables/phase4_cv_all_results.csv`
+- `models/phase4_best_model.joblib`
+
+---
+
+## Quick verification
+
+```bash
+# reports
+ls -lah reports/eda.md reports/preprocessing.md reports/feature_engineering.md reports/modeling.md
+
+# key tables / artifacts
+ls -lah reports/tables | head
+ls -lah data/processed | head
+ls -lah models | head
+```
+
+---
+
+## Next phase (Phase 5)
+
+Phase 5 (final evaluation) should include:
+- Test-set evaluation (Accuracy/Precision/Recall/F1)
+- ROC-AUC for top models
+- Confusion matrix
+- Final model selection + business recommendations

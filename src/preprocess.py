@@ -5,10 +5,16 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from joblib import dump
+
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+
+RANDOM_SEED = 42
+TEST_SIZE = 0.20
 
 
 def markdown_table(df: pd.DataFrame) -> str:
@@ -37,7 +43,8 @@ def make_binary_mappings(df: pd.DataFrame, cols: list[str]) -> dict:
 def apply_binary_mappings(df: pd.DataFrame, mappings: dict) -> pd.DataFrame:
     out = df.copy()
     for c, mapping in mappings.items():
-        out[c] = out[c].map(mapping).astype("int64")
+        if c in out.columns:
+            out[c] = out[c].map(mapping).astype("int64")
     return out
 
 
@@ -47,6 +54,8 @@ def main() -> None:
     parser.add_argument("--out", type=str, default="data/processed")
     parser.add_argument("--models", type=str, default="models")
     parser.add_argument("--reports", type=str, default="reports")
+    parser.add_argument("--seed", type=int, default=RANDOM_SEED)
+    parser.add_argument("--test_size", type=float, default=TEST_SIZE)
     args = parser.parse_args()
 
     data_path = Path(args.data)
@@ -59,60 +68,66 @@ def main() -> None:
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(data_path)
-
     df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors="coerce")
     totalcharges_missing = int(df["TotalCharges"].isna().sum())
     missing_tenure0 = int((df["TotalCharges"].isna() & (df["tenure"] == 0)).sum())
+
     df.loc[df["TotalCharges"].isna() & (df["tenure"] == 0), "TotalCharges"] = 0.0
     if df["TotalCharges"].isna().any():
         df["TotalCharges"] = df["TotalCharges"].fillna(df["TotalCharges"].median())
 
     y = (df["Churn"] == "Yes").astype(int)
-    X = df.drop(columns=["Churn", "customerID"])
-
+    X = df.drop(columns=["Churn", "customerID"], errors="ignore")
+    clean_df = X.copy()
+    clean_df["churn"] = y.to_numpy()
+    clean_path = out_dir / "telco_churn_clean.csv"
+    clean_df.to_csv(clean_path, index=False)
     binary_cols = [c for c in X.columns if X[c].dtype == "object" and X[c].nunique(dropna=True) == 2]
     mappings = make_binary_mappings(X, binary_cols)
-    X = apply_binary_mappings(X, mappings)
+    X_mapped = apply_binary_mappings(X, mappings)
+    idx = np.arange(len(X_mapped))
+    train_idx, test_idx = train_test_split(
+        idx, test_size=args.test_size, random_state=args.seed, stratify=y.to_numpy()
+    )
+    np.save(out_dir / "train_indices.npy", train_idx)
+    np.save(out_dir / "test_indices.npy", test_idx)
 
-    categorical_cols = [c for c in X.columns if X[c].dtype == "object"]
-    numeric_cols = [c for c in X.columns if X[c].dtype != "object"]
+    X_train, X_test = X_mapped.iloc[train_idx], X_mapped.iloc[test_idx]
+    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+    categorical_cols = [c for c in X_train.columns if X_train[c].dtype == "object"]
+    numeric_cols = [c for c in X_train.columns if X_train[c].dtype != "object"]
 
     preprocessor = ColumnTransformer(
         transformers=[
-            (
-                "num",
-                Pipeline(
-                    steps=[
-                        ("imputer", SimpleImputer(strategy="median")),
-                        ("scaler", StandardScaler()),
-                    ]
-                ),
-                numeric_cols,
-            ),
-            (
-                "cat",
-                Pipeline(
-                    steps=[
-                        ("imputer", SimpleImputer(strategy="most_frequent")),
-                        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
-                    ]
-                ),
-                categorical_cols,
-            ),
+            ("num", Pipeline([
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+            ]), numeric_cols),
+            ("cat", Pipeline([
+                ("imputer", SimpleImputer(strategy="most_frequent")),
+                ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
+            ]), categorical_cols),
         ],
         remainder="drop",
         verbose_feature_names_out=False,
     )
 
-    X_t = preprocessor.fit_transform(X)
+    X_train_t = preprocessor.fit_transform(X_train)
+    X_test_t = preprocessor.transform(X_test)
     feature_names = list(preprocessor.get_feature_names_out())
+    train_df = pd.DataFrame(X_train_t, columns=feature_names)
+    train_df["churn"] = y_train.to_numpy()
+    test_df = pd.DataFrame(X_test_t, columns=feature_names)
+    test_df["churn"] = y_test.to_numpy()
 
-    X_df = pd.DataFrame(X_t, columns=feature_names, index=df.index)
-    out_df = X_df.copy()
-    out_df["churn"] = y.to_numpy()
-
-    out_path = out_dir / "telco_churn_preprocessed.csv"
-    out_df.to_csv(out_path, index=False)
+    train_out = out_dir / "telco_churn_train_preprocessed.csv"
+    test_out = out_dir / "telco_churn_test_preprocessed.csv"
+    train_df.to_csv(train_out, index=False)
+    test_df.to_csv(test_out, index=False)
+    full_t = preprocessor.transform(X_mapped)
+    full_df = pd.DataFrame(full_t, columns=feature_names)
+    full_df["churn"] = y.to_numpy()
+    full_df.to_csv(out_dir / "telco_churn_preprocessed.csv", index=False)
 
     (out_dir / "feature_names.txt").write_text("\n".join(feature_names), encoding="utf-8")
     (models_dir / "binary_mappings.json").write_text(json.dumps(mappings, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -120,53 +135,48 @@ def main() -> None:
 
     overview = pd.DataFrame(
         [
-            ["rows", df.shape[0]],
-            ["raw cols", df.shape[1]],
-            ["target", "Churn (Yes/No) → churn (1/0)"],
-            ["TotalCharges missing after conversion", totalcharges_missing],
-            ["of which tenure==0", missing_tenure0],
-            ["binary encoded cols", len(binary_cols)],
-            ["one-hot cols", len(categorical_cols)],
-            ["numeric scaled cols", len(numeric_cols)],
-            ["final feature count", len(feature_names)],
-            ["output", str(out_path)],
+            ["TotalCharges NaN after conversion", totalcharges_missing],
+            ["NaN with tenure==0", missing_tenure0],
+            ["Split", f"stratified {int((1-args.test_size)*100)}/{int(args.test_size*100)} (seed={args.seed})"],
+            ["Binary label-encoded cols", len(binary_cols)],
+            ["One-hot cols", len(categorical_cols)],
+            ["Scaled numeric cols", len(numeric_cols)],
+            ["Final feature count", len(feature_names)],
         ],
         columns=["item", "value"],
     )
 
-    cols_tbl = pd.DataFrame(
-        [
-            ["binary_label", ", ".join(binary_cols) if binary_cols else "-"],
-            ["one_hot", ", ".join(categorical_cols) if categorical_cols else "-"],
-            ["numeric_scaled", ", ".join(numeric_cols) if numeric_cols else "-"],
-        ],
-        columns=["group", "columns"],
+    lines = []
+    lines.append("# Phase 2 — Preprocessing")
+    lines.append("")
+    lines.append("## Missing values & imputation (why)")
+    lines.append(
+        "- `TotalCharges` contains blanks in the raw CSV → becomes NaN after numeric conversion.\n"
+        "- For `tenure==0`, `TotalCharges` should be 0 (new customers have no accumulated charges).\n"
+        "- Remaining NaN are filled with **median** (robust to skew/outliers)."
     )
+    lines.append("")
+    lines.append("## Encoding & scaling (why)")
+    lines.append(
+        "- Binary categoricals → 0/1 (compact, keeps meaning).\n"
+        "- Multi-class categoricals → one-hot (avoids fake ordinality).\n"
+        "- Numeric features → StandardScaler (helps LR optimization)."
+    )
+    lines.append("")
+    lines.append("## Leakage-safe protocol")
+    lines.append("- Split first, then fit preprocessing only on the training set. Save split indices for later phases.")
+    lines.append("")
+    lines.append("## Summary")
+    lines.append(markdown_table(overview))
+    lines.append("")
+    lines.append("## Outputs")
+    lines.append(f"- Clean (for Phase 3): `{clean_path}`")
+    lines.append(f"- Preprocessed train: `{train_out}`")
+    lines.append(f"- Preprocessed test: `{test_out}`")
+    lines.append(f"- Preprocessor: `models/preprocessor.joblib`")
+    lines.append(f"- Mappings: `models/binary_mappings.json`")
 
-    report_lines = []
-    report_lines.append("# Phase 2 — Preprocessing")
-    report_lines.append("")
-    report_lines.append("## What we did")
-    report_lines.append("- Converted `TotalCharges` to numeric (blank strings → NaN)")
-    report_lines.append("- Filled NaN in `TotalCharges` for `tenure==0` with 0 (any remaining NaN → median)")
-    report_lines.append("- Converted `Churn` to `churn` (Yes=1, No=0)")
-    report_lines.append("- Label-encoded binary categorical columns (0/1)")
-    report_lines.append("- One-hot encoded multi-class categorical columns")
-    report_lines.append("- StandardScaled numeric columns")
-    report_lines.append("")
-    report_lines.append("## Summary")
-    report_lines.append(markdown_table(overview))
-    report_lines.append("")
-    report_lines.append("## Column grouping")
-    report_lines.append(markdown_table(cols_tbl))
-    report_lines.append("")
-    report_lines.append("## Outputs")
-    report_lines.append(f"- `{out_path}`")
-    report_lines.append(f"- `data/processed/feature_names.txt`")
-    report_lines.append(f"- `models/preprocessor.joblib`")
-    report_lines.append(f"- `models/binary_mappings.json`")
-
-    (reports_dir / "preprocessing.md").write_text("\n".join(report_lines), encoding="utf-8")
+    (reports_dir / "preprocessing.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 if __name__ == "__main__":
