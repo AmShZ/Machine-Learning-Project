@@ -1,4 +1,4 @@
-# Phase 1 — EDA
+# Phase 1 - EDA
 
 ## Dataset summary
 | item | value |
@@ -20,7 +20,7 @@
 | float64 | 1 |
 
 ## Missing values
-- No explicit NaN values found, but `TotalCharges` contains blank strings in the raw CSV.
+- No explicit NaN values were found, but `TotalCharges` contains blank strings in the raw CSV.
 
 ## Numeric features
 | feature | count | mean | std | min | 25% | 50% | 75% | max | missing |
@@ -102,9 +102,9 @@
 | No | 0.1633 |
 
 ## Quick notes
-- higher churn: Month-to-month (~42.7%)
-- lower churn: Two year (~2.8%)
+- Higher churn: Month-to-month (~42.7%)
+- Lower churn: Two year (~2.8%)
 - Fiber optic has higher churn risk (~41.9%)
-- payment method Electronic check shows higher churn (~45.3%)
-- median tenure: churn=Yes → 10, churn=No → 38
-- median MonthlyCharges: churn=Yes → 79.65, churn=No → 64.43
+- Payment method Electronic check shows higher churn (~45.3%)
+- Median tenure: churn=Yes -> 10, churn=No -> 38
+- Median MonthlyCharges: churn=Yes -> 79.65, churn=No -> 64.43

@@ -1,17 +1,17 @@
-# Phase 2 — Preprocessing
+# Phase 2 - Preprocessing
 
-## Missing values & imputation (why)
-- `TotalCharges` contains blanks in the raw CSV → becomes NaN after numeric conversion.
-- For `tenure==0`, `TotalCharges` should be 0 (new customers have no accumulated charges).
-- Remaining NaN are filled with **median** (robust to skew/outliers).
+## Missing values and imputation
+- `TotalCharges` blank strings become NaN after numeric conversion.
+- For `tenure==0`, `TotalCharges` is set to 0.
+- Remaining numeric missing values are median-imputed.
 
-## Encoding & scaling (why)
-- Binary categoricals → 0/1 (compact, keeps meaning).
-- Multi-class categoricals → one-hot (avoids fake ordinality).
-- Numeric features → StandardScaler (helps LR optimization).
+## Encoding and scaling
+- Binary categorical columns are label-encoded to 0/1.
+- Multi-class categorical columns are one-hot encoded.
+- Numeric columns are standardized with `StandardScaler`.
 
 ## Leakage-safe protocol
-- Split first, then fit preprocessing only on the training set. Save split indices for later phases.
+- The train/test split is created first, preprocessing is fit on train only, and saved indices are reused in later phases.
 
 ## Summary
 | item | value |
@@ -20,13 +20,16 @@
 | NaN with tenure==0 | 11 |
 | Split | stratified 80/20 (seed=42) |
 | Binary label-encoded cols | 5 |
-| One-hot cols | 10 |
+| One-hot encoded cols | 10 |
 | Scaled numeric cols | 9 |
 | Final feature count | 40 |
 
 ## Outputs
-- Clean (for Phase 3): `data\processed\telco_churn_clean.csv`
-- Preprocessed train: `data\processed\telco_churn_train_preprocessed.csv`
-- Preprocessed test: `data\processed\telco_churn_test_preprocessed.csv`
+- Clean dataset: `data/processed/telco_churn_clean.csv`
+- Preprocessed train: `data/processed/telco_churn_train_preprocessed.csv`
+- Preprocessed test: `data/processed/telco_churn_test_preprocessed.csv`
+- Full preprocessed dataset: `data/processed/telco_churn_preprocessed.csv`
+- Feature names: `data/processed/feature_names.txt`
+- Train/test indices: `data/processed/train_indices.npy`, `data/processed/test_indices.npy`
 - Preprocessor: `models/preprocessor.joblib`
-- Mappings: `models/binary_mappings.json`
+- Binary mappings: `models/binary_mappings.json`

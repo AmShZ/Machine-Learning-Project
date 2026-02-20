@@ -1,17 +1,17 @@
-# Phase 3 — Feature Engineering & Selection
+# Phase 3 - Feature Engineering and Selection
 
-## Engineered features (what & why)
-- **AvgChargesPerMonth** = TotalCharges / max(tenure, 1): captures spending intensity.
-- **NumServicesYes**: number of subscribed services; proxy for customer stickiness.
-- **TenureGroup**: tenure bins to capture non-linear lifecycle effects.
+## Engineered features
+- `AvgChargesPerMonth = TotalCharges / max(tenure, 1)`
+- `NumServicesYes` counts active services with value `Yes`
+- `TenureGroup` bins tenure into lifecycle bands
 
-## Selection methods (top-k)
-- ANOVA F-test (SelectKBest), k=15
-- L1 Logistic Regression (top-k by |coef|), k=15
-- RandomForest (top-k by importance), k=15
+## Selection methods
+- Filter method: ANOVA F-test (SelectKBest, k=15)
+- Embedded method: L1 Logistic Regression (top 15 by absolute coefficient)
+- Model-based method: RandomForest importance (top 15)
 
-## Final subset rationale
-We prefer features that are consistently strong across multiple selectors. Final list is ranked by summed ranks across ANOVA + L1 + RF.
+## Final subset rule
+- The final list uses rank aggregation across all three selectors.
 
 ## Final selected features
 | feature |
@@ -31,3 +31,9 @@ We prefer features that are consistently strong across multiple selectors. Final
 | MonthlyCharges |
 | TenureGroup_12-24 |
 | OnlineBackup_No |
+
+## Output tables
+- `reports/tables/selected_features_filter.csv`
+- `reports/tables/selected_features_model_l1.csv`
+- `reports/tables/selected_features_model_rf.csv`
+- `reports/tables/selected_features_final.csv`

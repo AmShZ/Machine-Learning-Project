@@ -1,29 +1,47 @@
-# Phase 4 — Modeling & Optimization (Project 7)
+# Phase 4 - Modeling and Optimization
 
-## What we did
-- Compared **class_weight** vs **SMOTE** for imbalance handling (SMOTE is applied inside CV).
-- Trained baseline models: Logistic Regression, SVM (RBF), KNN, Random Forest, and (optionally) XGBoost.
-- Hyperparameter tuning for **2 models** (LogReg + RandomForest) using RandomizedSearchCV (optimize Recall).
-- Advanced validation: StratifiedKFold (splits=5) and we report mean±std for Recall.
+## Setup
+- StratifiedKFold splits: 5
+- Primary metric: recall for churn=1
+- Feature engineering from Phase 3 applied: yes
+- Selected post-onehot feature subset used: yes
+- Selected feature count: 15
+- Selected feature source: `reports/tables/selected_features_final.csv`
 
-## Key tables
-- Baselines: `reports/tables/phase4_cv_baselines.csv`
-- Tuned: `reports/tables/phase4_cv_tuned.csv`
-- Combined + voting: `reports/tables/phase4_cv_all_results.csv`
+## Imbalance handling
+- class_weight=balanced
+- SMOTE inside CV pipeline
 
-## Best model (by Recall, tie-breaker F1)
-- **LogReg**
+## Models
+- Logistic Regression
+- SVM (RBF)
+- KNN
+- Random Forest
+- Gradient boosting: XGBoost when installed
+
+## Hyperparameter tuning
+- Tuned models: Logistic Regression and Random Forest
+- Search method: RandomizedSearchCV optimized for recall
+
+## Best model
+- VotingSoft_top3 (mixed)
+
+## Output tables
+- `reports/tables/phase4_cv_baselines.csv`
+- `reports/tables/phase4_cv_tuned.csv`
+- `reports/tables/phase4_cv_all_results.csv`
+
+## Top CV results
+| model | imbalance | recall_mean | recall_std | precision_mean | f1_mean | accuracy_mean |
+| --- | --- | --- | --- | --- | --- | --- |
+| VotingSoft_top3 | mixed | 0.7953 | 0.0292 | 0.511 | 0.6221 | 0.7437 |
+| LogReg_TUNED | smote | 0.7946 | 0.0271 | 0.5057 | 0.6181 | 0.7394 |
+| LogReg | smote | 0.7926 | 0.0301 | 0.5132 | 0.6228 | 0.7453 |
+| LogReg | class_weight | 0.792 | 0.0274 | 0.5103 | 0.6206 | 0.743 |
+| RandomForest_TUNED | smote | 0.7833 | 0.0308 | 0.5336 | 0.6345 | 0.7606 |
+| SVM_RBF | class_weight | 0.7739 | 0.0349 | 0.5202 | 0.6218 | 0.7503 |
+| SVM_RBF | smote | 0.7612 | 0.0393 | 0.5235 | 0.6198 | 0.7524 |
+| KNN | smote | 0.7204 | 0.0089 | 0.497 | 0.5882 | 0.7323 |
 
 ## Notes
-
-## Snapshot (top rows by recall_mean)
-| model | imbalance | recall_mean | recall_std | f1_mean | precision_mean | accuracy_mean |
-| --- | --- | --- | --- | --- | --- | --- |
-| LogReg | class_weight | 0.8013 | 0.0379 | 0.6284 | 0.5171 | 0.7487 |
-| VotingSoft_top3 | mixed | 0.7946 | 0.0364 | 0.6331 | 0.5265 | 0.7558 |
-| LogReg_TUNED | smote | 0.7866 | 0.0393 | 0.6312 | 0.5274 | 0.7563 |
-| LogReg | smote | 0.786 | 0.0377 | 0.6315 | 0.5282 | 0.7568 |
-| SVM_RBF | class_weight | 0.7719 | 0.0329 | 0.6191 | 0.517 | 0.7481 |
-| RandomForest_TUNED | smote | 0.7572 | 0.0259 | 0.6376 | 0.5511 | 0.7716 |
-| KNN | smote | 0.7405 | 0.0158 | 0.5584 | 0.4484 | 0.689 |
-| SVM_RBF | smote | 0.7211 | 0.0365 | 0.623 | 0.5486 | 0.7687 |
+- All required optional components were available.
