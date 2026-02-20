@@ -52,8 +52,11 @@
 - `reports/final_report.md`
 
 ## ROC-AUC comparison (Top 4 models)
-- Table: `reports/tables/phase5_auc_roc.csv`
-- Figure: `reports/figures/phase5_roc_curves.png`
+
+Table: `tables/phase5_auc_roc.csv`
+
+![ROC curves](figures/phase5_roc_curves.png)
+
 | model_id | rank | model | imbalance | auc_roc | status |
 | --- | --- | --- | --- | --- | --- |
 | rank1 | 1 | VotingSoft_top3 | mixed | 0.8387 | ok |
@@ -62,9 +65,13 @@
 | rank4 | 4 | LogReg | class_weight | 0.8389 | ok |
 
 ## Winner model and most important features
-- Winner model artifact: `models/phase4_best_model.joblib` (VotingClassifier)
-- Highest-impact features: tenure, Contract_Two year, Contract_Month-to-month, InternetService_Fiber optic, PaymentMethod_Electronic check
-- Feature table: `reports/tables/phase5_top_features.csv`
+
+Winner model artifact: `models/phase4_best_model.joblib`
+
+Highest-impact features: tenure, Contract_Two year, Contract_Month-to-month, InternetService_Fiber optic, PaymentMethod_Electronic check
+
+Feature table: `tables/phase5_top_features.csv`
+
 | feature | importance |
 | --- | --- |
 | tenure | 0.163357 |
