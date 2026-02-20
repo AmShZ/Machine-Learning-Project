@@ -327,6 +327,43 @@ def main() -> None:
     combined_path = tables_dir / "phase4_cv_all_results.csv"
     combined_df.to_csv(combined_path, index=False)
 
+    top4_source = combined_df.copy()
+    top4_source = top4_source[top4_source["status"] == "ok"]
+    top4_source = top4_source.dropna(subset=["recall_mean"])
+    top4_source = top4_source.sort_values(["recall_mean", "f1_mean"], ascending=False).head(4).reset_index(drop=True)
+
+    top4_models: dict[str, object] = {}
+    top4_rows: list[dict[str, object]] = []
+    for idx, row in top4_source.iterrows():
+        rank = idx + 1
+        model_name = str(row["model"])
+        imbalance = str(row["imbalance"])
+        if model_name.startswith("VotingSoft") and voting is not None:
+            candidate_pipeline = voting
+        else:
+            candidate_pipeline = pipeline_for_result(model_name, imbalance)
+        if candidate_pipeline is None:
+            continue
+        candidate_pipeline.fit(X_train, y_train)
+        model_id = f"rank{rank}"
+        top4_models[model_id] = candidate_pipeline
+        top4_rows.append(
+            {
+                "rank": rank,
+                "model": model_name,
+                "imbalance": imbalance,
+                "recall_mean": float(row["recall_mean"]),
+                "f1_mean": float(row["f1_mean"]),
+                "status": str(row["status"]),
+            }
+        )
+
+    dump(top4_models, models_dir / "phase4_top4_models.joblib")
+    pd.DataFrame(top4_rows, columns=["rank", "model", "imbalance", "recall_mean", "f1_mean", "status"]).to_csv(
+        tables_dir / "phase4_top4_models.csv",
+        index=False,
+    )
+
     best_row = combined_df.iloc[0]
     best_model_name = str(best_row["model"])
     best_imbalance = str(best_row["imbalance"])

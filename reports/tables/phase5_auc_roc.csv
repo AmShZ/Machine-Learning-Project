@@ -1,0 +1,5 @@
+model_id,rank,model,imbalance,auc_roc,status
+rank1,1,VotingSoft_top3,mixed,0.8387170942158155,ok
+rank2,2,LogReg_TUNED,smote,0.8356609574000878,ok
+rank3,3,LogReg,smote,0.8391123511328115,ok
+rank4,4,LogReg,class_weight,0.838861763414193,ok

@@ -50,3 +50,42 @@
 - `reports/tables/phase5_confusion_matrix.csv`
 - `reports/tables/phase5_classification_report.csv`
 - `reports/final_report.md`
+
+## ROC-AUC comparison (Top 4 models)
+- Table: `reports/tables/phase5_auc_roc.csv`
+- Figure: `reports/figures/phase5_roc_curves.png`
+| model_id | rank | model | imbalance | auc_roc | status |
+| --- | --- | --- | --- | --- | --- |
+| rank1 | 1 | VotingSoft_top3 | mixed | 0.8387 | ok |
+| rank2 | 2 | LogReg_TUNED | smote | 0.8357 | ok |
+| rank3 | 3 | LogReg | smote | 0.8391 | ok |
+| rank4 | 4 | LogReg | class_weight | 0.8389 | ok |
+
+## Winner model and most important features
+- Winner model artifact: `models/phase4_best_model.joblib` (VotingClassifier)
+- Highest-impact features: tenure, Contract_Two year, Contract_Month-to-month, InternetService_Fiber optic, PaymentMethod_Electronic check
+- Feature table: `reports/tables/phase5_top_features.csv`
+| feature | importance |
+| --- | --- |
+| tenure | 0.163357 |
+| Contract_Two year | 0.132942 |
+| Contract_Month-to-month | 0.118709 |
+| InternetService_Fiber optic | 0.077878 |
+| PaymentMethod_Electronic check | 0.070751 |
+| OnlineSecurity_No | 0.068744 |
+| TenureGroup_48-72 | 0.062283 |
+| TechSupport_No | 0.05964 |
+| TenureGroup_12-24 | 0.050381 |
+| TotalCharges | 0.042654 |
+| PaperlessBilling | 0.03836 |
+| AvgChargesPerMonth | 0.033153 |
+| OnlineBackup_No | 0.028637 |
+| TenureGroup_0-12 | 0.026542 |
+| MonthlyCharges | 0.025971 |
+
+## Business recommendations
+- Prioritize month-to-month customers with renewal incentives and migration paths to longer contracts.
+- Bundle security, backup, and support services for high-risk accounts to reduce service-related churn.
+- Launch a first-year retention program with proactive outreach during early-tenure periods.
+- Target electronic-check customers with autopay conversion campaigns and billing support.
+- Use personalized pricing reviews for customers with high monthly or per-month charge intensity.
